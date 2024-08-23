@@ -1,0 +1,66 @@
+name: Deploy Aquila CMS buildspec file
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v2
+      with:
+        node-version: '18'
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get upgrade -y
+        curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+        sudo apt-get install -y nodejs
+        node -v
+        npm install -g yarn
+        yarn -v
+        wget -qO - https://www.mongodb.org/static/pgp/server-6.0.asc | sudo apt-key add -
+        echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu focal/mongodb-org/6.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-6.0.list
+        sudo apt-get update
+        sudo apt-get install -y mongodb-org
+        sudo systemctl start mongod
+        sudo systemctl enable mongod
+        mongod --version
+        sudo apt-get install -y g++ gcc libgcc1 libstdc++6 linux-headers-$(uname -r) make python3 libtool automake autoconf nasm
+        sudo apt-get install -y xz-utils
+        wget https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6-1/wkhtmltox_0.12.6-1.focal_amd64.deb
+        sudo dpkg -i wkhtmltox_0.12.6-1.focal_amd64.deb
+        sudo apt --fix-broken install
+        sudo dpkg -i wkhtmltox_0.12.6-1.focal_amd64.deb
+        wkhtmltopdf --version
+        sudo apt-get install -y libvips libvips-dev
+        vips --version
+        npm install sharp
+        npm fund
+
+    - name: Install and build AquilaCMS
+      run: |
+        git clone https://github.com/AquilaCMS/AquilaCMS.git
+        cd AquilaCMS
+        yarn install
+        yarn start
+
+        
+    - name: Reboot server
+      run: |
+        sudo reboot
+
+    - name: Restart AquilaCMS
+      run: |
+        git clone https://github.com/AquilaCMS/AquilaCMS.git
+        cd AquilaCMS
+        yarn install
+        yarn start
